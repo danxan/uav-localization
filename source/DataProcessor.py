@@ -49,7 +49,7 @@ class DataProcessor:
 	def prepare_data(self, dataset):
 		'''
 		Reshape dataset into a column vector of images
-		and produce a column vector of corresponding labels.
+		and produce a one-hot encoded array of corresponding labels.
 		Then, split data into training and testing sets.
 
 		Args:
@@ -70,12 +70,15 @@ class DataProcessor:
 
 		# reshape image set and labels
 		X = np.vstack((dataset[:]))
-		#X = np.array([img.flatten() for img in X])
 		y = np.hstack((labels[:]))
+		y_onehot = np.zeros([y.shape[0], dataset.shape[0]])
+		for i in range(y.shape[0]):
+			y_onehot[i, int(y[i])] = 1
 
 		# split data
-		X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+		X_train, X_test, y_train, y_test = train_test_split(X, y_onehot, test_size=0.2)
 		return X_train, X_test, y_train, y_test
+
 
 
 if __name__=="__main__":
