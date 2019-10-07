@@ -76,8 +76,8 @@ class DataProcessor:
 			y_onehot[i, int(y[i])] = 1
 
 		# split data
-		X_train, X_test, y_train, y_test = train_test_split(X, y_onehot, test_size=0.2)
-		return X_train, X_test, y_train, y_test
+		X_train, X_test, y_train, y_test = train_test_split(X, y_onehot, test_size=0.3)
+		return X_train/255, X_test/255, y_train, y_test
 
 
 
