@@ -60,19 +60,6 @@ int target_width = 13;
 int new_height = height_conversion(target_height);
 int new_width = width_conversion(target_width);
 
-int*** tab = new int**[target_height];
-for( int i = 0; i < target_height; i++ )
-{
-  int** row = new int*[target_width];
-  for( int j = 0; j < N_CLASSES; j++ )
-  {
-    int* patch = new int[N_CLASSES];
-    row[j] = patch;
-  }
-  tab[i] = row;
-}
-
-
 //read files here and getting the center coordinates x & y
 int x1, x2, y1, y2;
 int class_id = 0;
@@ -82,7 +69,7 @@ newfile.open("test.txt",ios::in); //open a file to perform read operation using 
 if (newfile.is_open())
 {
   string tp;
-  char* mot;
+  char mot[10];
   while(getline(newfile, tp)) //EVERY LINE
   {
     int i = 0;
