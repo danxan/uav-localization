@@ -1,6 +1,8 @@
 #include <vector>
 #include <string>
+#include <math.h>
 #include <bits/stdc++.h>
+
 using namespace std;
 
 #define MAP_WIDTH 4800
@@ -9,6 +11,8 @@ using namespace std;
 #define MPPX 0.243 // dependent on spatial resolution of sattelite image
 #define ARWIDTH 1.87 // 1.87 is dependent on aspect ratio
 #define ARHEIGHT 1.05 // 1.05 is dependent on aspect ratio
+
+#define PI 3.14159265
 /**
  * Assumes two vectors of integers, uav and particle,
  * where each index is assigned to a class,
@@ -78,8 +82,8 @@ vector<int> pose_to_mcoords(vector<int> pose, int rows, int cols){
  * in the virtual view of the particle.
  * Each element of the matrix is a patch,
  * which contains only one value.
-*/
-int sum_from_simple_matrix(vector< vector<int> > matrix, vector<int> pose){
+ */
+int sum_from_cross_simple(vector< vector<int> > matrix, vector<int> pose){
     // Pseudocode:
     // Find patch of the center.
     int rows = matrix.size();
@@ -90,23 +94,57 @@ int sum_from_simple_matrix(vector< vector<int> > matrix, vector<int> pose){
     int rowcoord = pose[0]/pxpw; // The row location of particle
     int colcoord = pose[1]/pxph; // The column location of particle
 
-    //Find height and width of viewbox, in pixels.
-    int altitude = convert_to_altitude(pose[2]);
+    // Find width and height of viewbox, in pixels.
+    //int altitude = convert_to_altitude(pose[2]);
+    int altitude = 93;
+    int vb_w_px = altitude*ARWIDTH/MPPX;
+    int vb_h_px = altitude*ARHEIGHT/MPPX;
 
+    // Rotate viewbox to align with global frame, inside original boundaries (shrink it)
+    // Assuming pose[3] is angle represented in degrees
+    double rad = pose[3]*PI/180;
+    int tmp1 = vb_w_px*sin(rad);
+    int tmp2 = vb_w_px*cos(rad);
+    int tmp3 = vb_h_px*sin(rad);
+    int tmp4 = vb_h_px*cos(rad);
+    int avb_w_px;
+    int avb_h_px;
+    if(tmp2 > tmp3){
+        avb_w_px = tmp2;
+    }else{
+        avb_h_px = tmp3;
+    }
+    if(tmp1 > tmp4){
+        avb_w_px = tmp1;
+    }else{
+        avb_h_px = tmp4;
+    }
 
+    int num_patches_w = avb_w_px/pxpw;
+    int num_patches_h = avb_h_px/pxph;
 
+    // TODO: Handle case when particle is near border of map...
+    // Get values from matrix, around particle coordinates
+    int sum = 0;
+    int start_w = rowcoord - num_patches_w/2; // TODO? Handle float sitations?
+    for(int i = start_w; i < num_patches_w; i++){
+        sum += matrix[i][colcoord];
+    }
+    int start_h = colcoord - num_patches_h/2;
+    for(int i = start_h; i < num_patches_h; i++){
+        sum += matrix[rowcoord][i];
+    }
 
+    return sum;
+}
 
-
+int sum_from_box_simple(vector< vector<int> > matrix, vector<int> pose){
     // TODO: (Get the diagonal cross)
     //      (Make a function to find all corners,
     //      then "read" everything inside the extended box,
     //      then check whether 2/4 points around the center of the read patch
     //      is inside or outside the line drawn between the two nearest corners of the box.)
     // Get the cross that is aligned with the particle orientation.
-    int
-    int num_xpatches = width_in_num_patches(pose[2], MAP_WIDTH/mcoord[1]);
-    int num_ypatches = height_in_num_patches(pose[2], MAP_HEIGHT/mcoord[0]);
     //
     // Get the cross that is aligned with the global coordinate system.
 
