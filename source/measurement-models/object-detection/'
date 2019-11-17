@@ -242,7 +242,7 @@ class Measurement_model{
          * Each element of the matrix is a patch,
          * which contains only one value.
          */
-        vector<int> sum_from_cross_simple(vector<double> pose){
+        vector<int> sum_from_cross_simple(vector<int> pose){
             int rowcoord = pose[0]/patch_width; // The row location of particle
             int colcoord = pose[1]/patch_height; // The column location of particle
 
@@ -316,45 +316,11 @@ int height_in_num_patches(int altitude, int patch_height){
     return  height/(MPPX*patch_height);
 }
 
-// Rotating CV Points, used for plotting.
-Point rotate(Point pt, Point orig, double theta){
-    double tx,ty;
-    tx = pt.x-orig.x;
-    ty = pt.y-orig.y;
-    pt.x = tx*cos(theta) - ty*sin(theta) + orig.x;
-    pt.y = ty*cos(theta) + tx*sin(theta) + orig.y;
-
-    return pt;
-}
-
 int main(){
+    namedWindow("title");
+    int w = 500;
+    Mat cnt_img = Mat::zeros(w, w, CV_8UC3);
 
-
-
-    vector<double> pose(4,0);
-    pose[0] = 500;
-    pose[1] = 500;
-    pose[2] = 20;
-    pose[3] = 90;
-
-
-    Measurement_model mm = Measurement_model(2000,2000);
-    vector<int> a(4, 3);
-    vector<int> b(4, 4);
-    vector<int> sum = mm.add_int_vectors(a,b, 4);
-    for(int i = 0; i < sum.size(); i++){
-        printf("%d, ", sum[i]);
-
-    }
-    mm.matrix_from_file("test.txt");
-    sum = mm.sum_from_cross_simple(pose);
-    for(int i = 0; i < sum.size(); i++){
-        printf("%d, ", sum[i]);
-
-    }
-
-
-    /*
     imshow("title", cnt_img);
     waitKey(0);
     destroyWindow("title");
@@ -367,104 +333,10 @@ int main(){
     waitKey(0);
     destroyWindow("title");
 
-    line(cnt_img, pt, Point(pt.x-10,pt.y-10), Scalar(0,255,255), 5, 8, 0);
+    line(cnt_img, pt, Point(pt.x-5,pt.y-5), Scalar(0,255,255), 5, 8, 0);
     imshow("title", cnt_img);
     waitKey(0);
     destroyWindow("title");
-
-    rectangle( cnt_img, Point(w*0.33, w*0.33), Point(w*0.66, w*0.66),Scalar(0,255,255), 5, 8, 0);
-    imshow("title", cnt_img);
-    waitKey(0);
-    destroyWindow("title");
-    */
-    /*
-
-    namedWindow("title");
-    int w = 1000;
-    int h = 1000;
-    Mat cnt_img = Mat::zeros(w, w, CV_8UC3);
-    // Plot Grid
-    int rows = 50;
-    int cols = 50;
-    for(int i = 0; i < rows-1; i++){
-        for(int j = 0; j < cols-1; j++){
-            int x = w*i/rows;
-            int y = h*j/cols;
-            int x2 = w*(i+1)/rows;
-            int y2 = h*(j+1)/cols;
-            rectangle(cnt_img, Point(x,y), Point(x2,y2), Scalar(90,90,90), 1, 8, 0);
-        }
-    }
-
-    // Plot Particle
-    vector<double> pose(4,0);
-    pose[0] = 500;
-    pose[1] = 500;
-    pose[2] = 20;
-    pose[3] = 90;
-
-    Point orig = Point(pose[0], pose[1]);
-
-    int height = pose[2]*ARHEIGHT/MPPX;
-    int width = pose[2]*ARWIDTH/MPPX;
-
-    vector<Point> pts(4);
-    pts[0] = Point(pose[0]-width/2, pose[1]+height/2);
-    pts[1] = Point(pose[0]+width/2, pose[1]+height/2);
-    pts[2] = Point(pose[0]+width/2, pose[1]-height/2);
-    pts[3] = Point(pose[0]-width/2, pose[1]-height/2);
-
-    double theta = pose[3]*CV_PI/180;
-
-    circle(cnt_img, orig, 3, Scalar(0,0,255), FILLED, LINE_AA);
-
-
-    for(int haha=0; haha<360; haha++){
-
-        cnt_img = Scalar(255, 255, 255);
-
-        double deg = haha*CV_PI/180;
-
-        for(int i = 0; i < pts.size(); i++){
-            circle(cnt_img, pts[i], 3, Scalar(255, 0, 0), FILLED, LINE_AA);
-            line(cnt_img, pts[i], pts[(i+1)%pts.size()], Scalar(255,0,0), 1, 8, 0);
-        }
-
-
-        for(int i = 0; i < pts.size(); i++){
-            Point pt = rotate(pts[i], orig, deg);
-            circle(cnt_img, pt, 3, Scalar(0, 0, 255), FILLED, LINE_AA);
-
-            Point pt1 = rotate(pts[i], orig, deg);
-            Point pt2 = rotate(pts[(i+1)%pts.size()], orig, deg);
-            line(cnt_img, pt1, pt2, Scalar(0,0,255), 1, 8, 0);
-        }
-
-        imshow("title", cnt_img);
-        waitKey(11);
-    }
-    destroyWindow("title");
-
-
-
-    //printf("x0: %d, y0: %d, x0n: %d, y0n: %d \n",x0,y0,x0n,y0n);
-    */
-    /*
-    imshow("title", cnt_img);
-    waitKey(0);
-    destroyWindow("title");
-    */
-
-    /*
-    Point pt = Point(pose[0],pose[1]);
-    circle(cnt_img, pt, 3, Scalar(0, 0, 255), FILLED, LINE_AA);
-    line(cnt_img, pt, Point(pt.x-10,pt.y-10), Scalar(0,255,255), 1, 8, 0);
-    imshow("title", cnt_img);
-    waitKey(0);
-    destroyWindow("title");
-    */
-
-
     return 0;
 }
 
