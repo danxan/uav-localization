@@ -131,14 +131,6 @@ class Measurement_model{
                 return i;
         }
 
-        vector<int> add_int_vectors(vector<int> a, vector<int> b, size_t n){
-            size_t i;
-            vector<int> ret(n, 0);
-            for(i = 0; i < n; ++i) {
-                ret[i] = a[i] + b[i];
-            }
-            return ret;
-        }
 
     public:
 
@@ -151,6 +143,107 @@ class Measurement_model{
 
             num_rows = MAP_HEIGHT/patch_height;
             num_cols = MAP_WIDTH/patch_width;
+        }
+        void pxcoords_mcoords(int pxx, int pxy, int &mx, int &my){
+            mx = pxx/patch_width;
+            my = pxy/patch_height;
+        }
+        //
+        // Rotating CV Points, used for plotting.
+        Point rotate(Point pt, Point orig, double theta){
+            double tx,ty;
+            tx = pt.x-orig.x;
+            ty = pt.y-orig.y;
+            pt.x = tx*cos(theta) - ty*sin(theta) + orig.x;
+            pt.y = ty*cos(theta) + tx*sin(theta) + orig.y;
+
+            return pt;
+        }
+
+
+        vector<Point> create_box(vector<double> pose){
+            //int altitude = convert_to_altitude(pose[2]);
+            int altitude = 90; //meters
+            int width = pose[2]*ARWIDTH/MPPX;// pixels
+            int height = pose[2]*ARHEIGHT/MPPX;// pixels
+
+            Point center = Point(pose[0],pose[1]);
+            // Create viewbox
+            vector<Point> pts(4);
+            pts[0] = Point(pose[0]-width/2, pose[1]+height/2); // bottom left
+            pts[1] = Point(pose[0]+width/2, pose[1]+height/2); // bottom right
+            pts[2] = Point(pose[0]+width/2, pose[1]-height/2); // top right
+            pts[3] = Point(pose[0]-width/2, pose[1]-height/2); // top left
+
+            double theta = pose[3]*CV_PI/180; // assuming pose[3] is in deg
+
+            // Rotate box to align with particle orientation
+            vector<Point> a_pts(4);
+            for(int i = 0; i < 4; i++){
+                a_pts[i] = rotate(pts[i], center, theta);
+            }
+
+            return a_pts;
+        }
+
+        /**
+         * This currently only works for angles between 0 and 90
+        */
+        Point create_step(Point a, Point b){
+            Point step;
+            step.x = b.x - a.x;
+            step.x = min(step.x, patch_width);
+            double rise;
+            if(step.x != 0){
+                rise = abs(double(b.y-a.y)/double(b.x-a.x));
+                step.y = rise*step.x;
+            }else{
+                step.y = patch_height;
+            }
+            return step;
+        }
+
+        /**
+         * Returns a vector if coordinates
+        */
+        void viewbox_content(vector<Point> pts){
+            // Matrix coordinates for corner points
+            // left, right, top, bottom
+            int mx_l, my_l, mx_r, my_r, mx_t, my_t, mx_b, my_b;
+            pxcoords_mcoords(pts[0].x, pts[0].y, mx_l, my_l);
+            pxcoords_mcoords(pts[3].x, pts[3].y, mx_r, my_r);
+            pxcoords_mcoords(pts[2].x, pts[2].y, mx_t, my_t);
+            pxcoords_mcoords(pts[4].x, pts[4].y, mx_b, my_b);
+
+            /*
+            // Create vectors to store the max and min rowidx for each colidx
+            vector<int> max(mx_r - mx_l);
+            vector<int> min(mx_r - mx_l);
+            Point step;
+            for(int i = 0; i < pts.size(); i++){
+                if(pts[i].y < pts[(i+1)%pts.size()].y){
+                    step = create_step(pts[i], pts[(i+1)%pts.size()]);
+                }else if(pts[i].y > pts[(i+1)%pts.size()].y){
+                    step = create_step(pts[(i+1)%pts.size()], pts[i]);
+                }else{
+                    step.x = patch_width;
+                    step.y = 0;
+                }
+
+                Point idx = pts[0];
+                while(idx.x < pts
+                */
+
+        }
+
+
+        vector<int> add_int_vectors(vector<int> a, vector<int> b, size_t n){
+            size_t i;
+            vector<int> ret(n, 0);
+            for(i = 0; i < n; ++i) {
+                ret[i] = a[i] + b[i];
+            }
+            return ret;
         }
 
         vector<int>** matrix_from_file(string map_filename){
@@ -221,6 +314,7 @@ class Measurement_model{
                     cout << new_x <<':'<< new_y<<'\n';
                     matrix[new_x][new_y][class_id] += 1;
                     cout << "matrix[" << new_x << "][" << new_y << "][" << class_id << "] = " << matrix[new_x][new_y][class_id] << '\n';
+                    cout << "matrix[0][0][48] " << matrix[0][0][48] << '\n';
                 }
                 newfile.close(); //close the file object.
             }
@@ -234,6 +328,7 @@ class Measurement_model{
                 }
             }
             cout << "num_rows*num_cols = " << num_rows*num_cols << " sum: " << sum << '\n';
+                    cout << "matrix[0][0][48] " << matrix[0][0][48] << '\n';
         }
 
         /**
@@ -243,8 +338,10 @@ class Measurement_model{
          * which contains only one value.
          */
         vector<int> sum_from_cross_simple(vector<double> pose){
+                    cout << "matrix[0][0][48] " << matrix[0][0][48] << '\n';
             int rowcoord = pose[0]/patch_width; // The row location of particle
             int colcoord = pose[1]/patch_height; // The column location of particle
+            printf("rowcoord %d, colcoord %d \n", rowcoord, colcoord);
 
             // Find width and height of viewbox, in pixels.
             //int altitude = convert_to_altitude(pose[2]);
@@ -254,7 +351,7 @@ class Measurement_model{
 
             // Rotate viewbox to align with global frame, inside original boundaries (shrink it)
             // Assuming pose[3] is angle represented in degrees
-            double rad = pose[3]*PI/180;
+            double rad = pose[3]*CV_PI/180;
             int tmp1 = vb_w_px*sin(rad);
             int tmp2 = vb_w_px*cos(rad);
             int tmp3 = vb_h_px*sin(rad);
@@ -271,6 +368,7 @@ class Measurement_model{
             }else{
                 avb_h_px = tmp4;
             }
+            printf("avb_w_px %d, avb_h_px %d \n", avb_w_px, avb_h_px);
 
             int num_patches_w = avb_w_px/patch_width;
             int num_patches_h = avb_h_px/patch_height;
@@ -278,16 +376,56 @@ class Measurement_model{
             // TODO: Handle case when particle is near border of map...
             // Get values from matrix, around particle coordinates
             vector<int> sum(N_CLASSES, 0);
-            int start_w = rowcoord - num_patches_w/2; // TODO? Handle float sitations?
-            for(int i = start_w; i < num_patches_w; i++){
+            cout << "before sum of cross" << '\n';
+            int start_w = rowcoord - num_patches_w/2; // TODO? Handle float sitation?
+            cout << "start_w " << start_w << "start_w+num_patches_w" << start_w+num_patches_w << '\n';
+            for(int i = start_w; i < start_w + num_patches_w; i++){
+                cout << "i is: " << i << '\n';
                 sum = add_int_vectors(sum, matrix[i][colcoord], N_CLASSES);
             }
+            cout << "start_w " << start_w << " num_patches_h " << num_patches_h << '\n';
             int start_h = colcoord - num_patches_h/2;
-            for(int i = start_h; i < num_patches_h; i++){
+            for(int i = start_h; i < start_h + num_patches_h; i++){
+                cout << "i is: " << i << '\n';
                 sum = add_int_vectors(sum, matrix[rowcoord][i], N_CLASSES);
             }
 
             return sum;
+        }
+
+        void plot_grid(Mat &img, string window_name){
+            int w = MAP_WIDTH;
+            int h = MAP_HEIGHT;
+            img = Mat::zeros(w, w, CV_8UC3);
+            img = Scalar(255,255,255);
+            // Plot Grid
+            for(int i = 0; i < num_rows; i++){
+                for(int j = 0; j < num_cols; j++){
+                    int x = w*i/num_rows;
+                    int y = h*j/num_cols;
+                    int x2 = x + patch_width;
+                    int y2 = y + patch_height;
+                    rectangle(img, Point(x,y), Point(x2,y2), Scalar(90,90,90), 3, 8, 0);
+                }
+            }
+        }
+
+        void plot_particle(Mat img, vector<double> pose){
+            Point pt =  Point(pose[0], pose[1]);
+            Point pt2 = Point(pt.x, pt.y-100);
+            pt2 = rotate(pt2, pt, pose[3]*CV_PI/180);
+
+            circle(img, pt, 20, Scalar(0,0,255), FILLED, LINE_AA);
+            line(img, pt, pt2, Scalar(0,255,255), 5, 8, 0);
+
+        }
+
+        void plot_viewbox(Mat img, vector<Point> pts){
+            circle(img, pts[0], 15, Scalar(0,0,255), FILLED, LINE_AA);
+            for(int i = 0; i < pts.size(); i++){
+                circle(img, pts[i], 3, Scalar(255, 0, 0), FILLED, LINE_AA);
+                line(img, pts[i], pts[(i+1)%pts.size()], Scalar(255,0,0), 3, 8, 0);
+            }
         }
 };
 
@@ -316,43 +454,41 @@ int height_in_num_patches(int altitude, int patch_height){
     return  height/(MPPX*patch_height);
 }
 
-// Rotating CV Points, used for plotting.
-Point rotate(Point pt, Point orig, double theta){
-    double tx,ty;
-    tx = pt.x-orig.x;
-    ty = pt.y-orig.y;
-    pt.x = tx*cos(theta) - ty*sin(theta) + orig.x;
-    pt.y = ty*cos(theta) + tx*sin(theta) + orig.y;
-
-    return pt;
-}
 
 int main(){
-
-
-
     vector<double> pose(4,0);
-    pose[0] = 500;
-    pose[1] = 500;
-    pose[2] = 20;
-    pose[3] = 90;
+    pose[0] = 2400;
+    pose[1] = 2400;
+    pose[2] = 90;
+    pose[3] = 30;
 
-
-    Measurement_model mm = Measurement_model(2000,2000);
+    Measurement_model mm = Measurement_model(480,480);
     vector<int> a(4, 3);
     vector<int> b(4, 4);
     vector<int> sum = mm.add_int_vectors(a,b, 4);
+    printf("SUM: \n");
     for(int i = 0; i < sum.size(); i++){
         printf("%d, ", sum[i]);
 
     }
     mm.matrix_from_file("test.txt");
-    sum = mm.sum_from_cross_simple(pose);
-    for(int i = 0; i < sum.size(); i++){
-        printf("%d, ", sum[i]);
 
-    }
+    string window_name = "map";
+    Mat img;
+    mm.plot_grid(img,window_name);
 
+    mm.plot_particle(img, pose);
+
+    vector<Point> a_pts = mm.create_box(pose);
+    mm.plot_viewbox(img, a_pts);
+
+    Point step = mm.create_step(a_pts[0], a_pts[3]);
+    printf("stepx %d stepy %d \n", step.x, step.y);
+
+    namedWindow(window_name, WINDOW_NORMAL);
+    imshow(window_name, img);
+    waitKey(0);
+    destroyWindow(window_name);
 
     /*
     imshow("title", cnt_img);
