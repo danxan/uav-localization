@@ -191,8 +191,11 @@ class Measurement_model{
         */
         Point create_step(Point a, Point b){
             Point step;
-            step.x = b.x - a.x;
+            step.x = abs(b.x - a.x);
             step.x = min(step.x, patch_width);
+            step.y = abs(b.y - a.y);
+            step.y = min(step.y, patch_width);
+            /*
             double rise;
             if(step.x != 0){
                 rise = abs(double(b.y-a.y)/double(b.x-a.x));
@@ -200,39 +203,155 @@ class Measurement_model{
             }else{
                 step.y = patch_height;
             }
+            */
             return step;
         }
 
+        Point create_step(Point a, Point b, double theta){
+            Point step;
+
+
+            return step;
+        }
+
+
+        void mcoords_pxcoords(int mx, int my, int &pxx, int &pxy){
+            pxx = mx*patch_width;
+            pxy = my*patch_height;
+        }
         /**
          * Returns a vector if coordinates
         */
-        void viewbox_content(vector<Point> pts){
-            // Matrix coordinates for corner points
-            // left, right, top, bottom
-            int mx_l, my_l, mx_r, my_r, mx_t, my_t, mx_b, my_b;
-            pxcoords_mcoords(pts[0].x, pts[0].y, mx_l, my_l);
-            pxcoords_mcoords(pts[3].x, pts[3].y, mx_r, my_r);
-            pxcoords_mcoords(pts[2].x, pts[2].y, mx_t, my_t);
-            pxcoords_mcoords(pts[4].x, pts[4].y, mx_b, my_b);
-
-            /*
-            // Create vectors to store the max and min rowidx for each colidx
-            vector<int> max(mx_r - mx_l);
-            vector<int> min(mx_r - mx_l);
-            Point step;
+        void viewbox_content(Mat &img, vector<Point> pts){
+            Point left(MAP_WIDTH,0);
+            Point right(0,0);
+            Point top(0,MAP_HEIGHT); //initialize with the opposite of goal
+            Point bottom(0,0);
             for(int i = 0; i < pts.size(); i++){
-                if(pts[i].y < pts[(i+1)%pts.size()].y){
-                    step = create_step(pts[i], pts[(i+1)%pts.size()]);
-                }else if(pts[i].y > pts[(i+1)%pts.size()].y){
-                    step = create_step(pts[(i+1)%pts.size()], pts[i]);
-                }else{
-                    step.x = patch_width;
-                    step.y = 0;
+                if(left.x > pts[i].x){
+                    left = pts[i];
                 }
+                if(right.x < pts[i].x){
+                    right = pts[i];
+                }
+                if(top.y > pts[i].y){
+                    top = pts[i];
+                }
+                if(bottom.y < pts[i].y){
+                    bottom = pts[i];
+                }
+            }
+            circle(img, left, 50, Scalar(0,0,255), FILLED, LINE_AA);
+            circle(img, right, 50, Scalar(0,0,255), FILLED, LINE_AA);
+            circle(img, top, 50, Scalar(0,0,255), FILLED, LINE_AA);
+            circle(img, bottom, 50, Scalar(0,0,255), FILLED, LINE_AA);
+            cout << "aftr left right top bottom" << '\n';
+            // Matrix coordinates for corner points
+            int mx_l, my_l, mx_r, my_r, mx_t, my_t, mx_b, my_b;
+            pxcoords_mcoords(left.x, left.y, mx_l, my_l);
+            pxcoords_mcoords(right.x, right.y, mx_r, my_r);
+            pxcoords_mcoords(top.x, top.y, mx_t, my_t);
+            pxcoords_mcoords(bottom.x, bottom.y, mx_b, my_b);
 
-                Point idx = pts[0];
-                while(idx.x < pts
-                */
+
+            Point mleft(mx_l,my_l);
+            Point mright(mx_r,my_r);
+            Point mtop(mx_t,my_t); //initialize with the opposite of goal
+            Point mbottom(mx_b,my_b);
+            circle(img, mleft, 50, Scalar(0,255,0), FILLED, LINE_AA);
+            circle(img, mright, 50, Scalar(0,255,0), FILLED, LINE_AA);
+            circle(img, mtop, 50, Scalar(0,255,0), FILLED, LINE_AA);
+            circle(img, mbottom, 50, Scalar(0,255,0), FILLED, LINE_AA);
+
+            cout << "aftr mcoords" << '\n';
+            cout << "left.x " << left.x << " left.y " << left.y << '\n';
+            cout << "right.x " << right.x << " right.y " << right.y << '\n';
+            cout << "top.x " << top.x << " top.y " << top.y << '\n';
+            cout << "bottom.x " <<  bottom.x << " bottom.y " << bottom.y << '\n';
+
+            // Create vectors to store the max and min rowidx for each colidx
+            int tmp = mx_r - mx_l;
+            cout << "mx_r" << mx_r << "mx_l" << mx_l << '\n';
+
+            vector<int> maxv(tmp,0);
+            cout << "aftr max" << '\n';
+
+            vector<int> minv(tmp,MAP_HEIGHT);
+            Point step, idx;
+
+            int mx, my;
+            cout << "before create step" << '\n';
+            step = create_step(left, top);
+            cout << "aftr create step" << '\n';
+            idx = left;
+            while(idx.y > top.y && idx.x < right.x){
+                pxcoords_mcoords(idx.x, idx.y, mx, my);
+                // top and bottom are inverse. top is lowest..
+                cout << mx - mx_l << '\n';
+                if(my > maxv[mx-mx_l]){
+                    maxv[mx-mx_l] = my;
+                }
+                if(my < minv[mx-mx_l]){
+                    minv[mx-mx_l] = my;
+                }
+                idx.x += step.x;
+                idx.y -= step.y;
+            }
+            cout << "aftr left top" << '\n';
+            step = create_step(left, bottom);
+            idx = left;
+            while(idx.y < bottom.y && idx.x < right.x){
+                pxcoords_mcoords(idx.x, idx.y, mx, my);
+                // top and bottom are inverse. top is lowest..
+                if(my > maxv[mx-mx_l]){
+                    maxv[mx-mx_l] = my;
+                }
+                if(my < minv[mx-mx_l]){
+                    minv[mx-mx_l] = my;
+                }
+                idx.x += step.x;
+                idx.y += step.y;
+            }
+            cout << "aftr left bottom" << '\n';
+            step = create_step(top, right);
+            idx = top;
+            while(idx.y < bottom.y && idx.x < right.x){
+                pxcoords_mcoords(idx.x, idx.y, mx, my);
+                // top and bottom are inverse. top is lowest..
+                cout << "mx " << mx << " mx_l " << mx_l << '\n';
+                if(my > maxv[mx-mx_l-1]){
+                    maxv[mx-mx_l-1] = my;
+                }
+                if(my < minv[mx-mx_l-1]){
+                    minv[mx-mx_l-1] = my;
+                }
+                idx.x += step.x;
+                idx.y += step.y;
+            }
+            cout << "aftr top right" << '\n';
+            step = create_step(bottom, right);
+            idx = bottom;
+            while(idx.y > top.y && idx.x < right.x){
+                pxcoords_mcoords(idx.x, idx.y, mx, my);
+                // top and bottom are inverse. top is lowest..
+                if(my > maxv[mx-mx_l-1]){
+                    maxv[mx-mx_l-1] = my;
+                }
+                if(my < minv[mx-mx_l-1]){
+                    minv[mx-mx_l-1] = my;
+                }
+                idx.x += step.x;
+                idx.y -= step.y;
+            }
+            cout << "aftr bottom right" << '\n';
+            for(int i = 0; i < maxv.size(); i++){
+                cout << "maxv[" << i << "]: " << maxv[i] << '\n';
+                Point pt = Point((i+mx_l)*patch_width, maxv[i]*patch_height);
+                //circle(img, pt, 50, Scalar(0,0,255), FILLED, LINE_AA);
+                cout << "minv[" << i << "]: " << minv[i] << '\n';
+                Point pt2 = Point((i+mx_l)*patch_width, minv[i]*patch_height);
+                //circle(img, pt2, 50, Scalar(0,0,255), FILLED, LINE_AA);
+            }
 
         }
 
@@ -312,8 +431,8 @@ class Measurement_model{
                     int new_x = floor(x/patch_height);
                     int new_y = floor(y/patch_width);
                     cout << new_x <<':'<< new_y<<'\n';
-                    matrix[new_x][new_y][class_id] += 1;
-                    cout << "matrix[" << new_x << "][" << new_y << "][" << class_id << "] = " << matrix[new_x][new_y][class_id] << '\n';
+                    matrix[new_y][new_x][class_id] += 1;
+                    cout << "matrix[" << new_y << "][" << new_x << "][" << class_id << "] = " << matrix[new_y][new_x][class_id] << '\n';
                     cout << "matrix[0][0][48] " << matrix[0][0][48] << '\n';
                 }
                 newfile.close(); //close the file object.
@@ -410,7 +529,7 @@ class Measurement_model{
             }
         }
 
-        void plot_particle(Mat img, vector<double> pose){
+        void plot_particle(Mat &img, vector<double> pose){
             Point pt =  Point(pose[0], pose[1]);
             Point pt2 = Point(pt.x, pt.y-100);
             pt2 = rotate(pt2, pt, pose[3]*CV_PI/180);
@@ -420,7 +539,7 @@ class Measurement_model{
 
         }
 
-        void plot_viewbox(Mat img, vector<Point> pts){
+        void plot_viewbox(Mat &img, vector<Point> pts){
             circle(img, pts[0], 15, Scalar(0,0,255), FILLED, LINE_AA);
             for(int i = 0; i < pts.size(); i++){
                 circle(img, pts[i], 3, Scalar(255, 0, 0), FILLED, LINE_AA);
@@ -460,9 +579,9 @@ int main(){
     pose[0] = 2400;
     pose[1] = 2400;
     pose[2] = 90;
-    pose[3] = 30;
+    pose[3] = 300;
 
-    Measurement_model mm = Measurement_model(480,480);
+    Measurement_model mm = Measurement_model(48,48);
     vector<int> a(4, 3);
     vector<int> b(4, 4);
     vector<int> sum = mm.add_int_vectors(a,b, 4);
@@ -481,9 +600,11 @@ int main(){
 
     vector<Point> a_pts = mm.create_box(pose);
     mm.plot_viewbox(img, a_pts);
+    mm.viewbox_content(img, a_pts);
+    cout << "HEI" << '\n';
 
-    Point step = mm.create_step(a_pts[0], a_pts[3]);
-    printf("stepx %d stepy %d \n", step.x, step.y);
+    //Point step = mm.create_step(a_pts[0], a_pts[3]);
+    //printf("stepx %d stepy %d \n", step.x, step.y);
 
     namedWindow(window_name, WINDOW_NORMAL);
     imshow(window_name, img);
