@@ -535,7 +535,7 @@ class Measurement_model{
             pt2 = rotate(pt2, pt, pose[3]*CV_PI/180);
 
             circle(img, pt, 20, Scalar(0,0,255), FILLED, LINE_AA);
-            line(img, pt, pt2, Scalar(0,255,255), 5, 8, 0);
+            line(img, pt, pt2, Scalar(0,255,0), 12, 8, 0);
 
         }
 
@@ -543,7 +543,7 @@ class Measurement_model{
             circle(img, pts[0], 15, Scalar(0,0,255), FILLED, LINE_AA);
             for(int i = 0; i < pts.size(); i++){
                 circle(img, pts[i], 3, Scalar(255, 0, 0), FILLED, LINE_AA);
-                line(img, pts[i], pts[(i+1)%pts.size()], Scalar(255,0,0), 3, 8, 0);
+                line(img, pts[i], pts[(i+1)%pts.size()], Scalar(255,0,0), 8, 8, 0);
             }
         }
 };
@@ -576,12 +576,8 @@ int height_in_num_patches(int altitude, int patch_height){
 
 int main(){
     vector<double> pose(4,0);
-    pose[0] = 2400;
-    pose[1] = 2400;
-    pose[2] = 90;
-    pose[3] = 300;
 
-    Measurement_model mm = Measurement_model(48,48);
+    Measurement_model mm = Measurement_model(240,240);
     vector<int> a(4, 3);
     vector<int> b(4, 4);
     vector<int> sum = mm.add_int_vectors(a,b, 4);
@@ -596,15 +592,35 @@ int main(){
     Mat img;
     mm.plot_grid(img,window_name);
 
+    pose[0] = 2400;
+    pose[1] = 2400;
+    pose[2] = 150;
+    pose[3] = 45;
     mm.plot_particle(img, pose);
 
     vector<Point> a_pts = mm.create_box(pose);
     mm.plot_viewbox(img, a_pts);
-    mm.viewbox_content(img, a_pts);
-    cout << "HEI" << '\n';
+    //mm.viewbox_content(img, a_pts);
+
+    pose[0] = 1000;
+    pose[1] = 1000;
+    pose[2] = 200;
+    pose[3] = 0;
+    mm.plot_particle(img, pose);
+
+    vector<Point> a_pts2 = mm.create_box(pose);
+
+    pose[0] = 3000;
+    pose[1] = 3500;
+    pose[2] = 90;
+    pose[3] = 270;
+    mm.plot_particle(img, pose);
+
+    vector<Point> a_pts3 = mm.create_box(pose);
+    mm.plot_viewbox(img, a_pts3);   mm.plot_viewbox(img, a_pts2);
+    //mm.viewbox_content(img, a_pts);
 
     //Point step = mm.create_step(a_pts[0], a_pts[3]);
-    //printf("stepx %d stepy %d \n", step.x, step.y);
 
     namedWindow(window_name, WINDOW_NORMAL);
     imshow(window_name, img);
